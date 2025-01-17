@@ -1,23 +1,27 @@
-from config_data.config import load_config
-from aiogram import Bot, Dispatcher, F
-from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
+import asyncio
 
-config = load_config('.env')
-
-bot = Bot(token=config.tg_bot.token)
-dp = Dispatcher()
-
-some_var_1 = 1
-some_var_2 = 'Some text'
-
-dp.workflow_data.update({'my_int_var': some_var_1, 'my_text_var': some_var_2})
+from aiogram import Bot, Dispatcher
+from config_data.config import Config, load_config
+from handlers import other_handlers, user_handlers
 
 
-@dp.message(Command(commands='start'))
-async def process_start_command(message: Message, my_int_var, my_text_var):
-    await message.answer(text=str(my_int_var))
-    await message.answer(text=my_text_var)
+# Функция конфигурирования и запуска бота
+async def main():
+
+    # Загружаем конфиг в переменную config
+    config: Config = load_config()
     
-if __name__ == '__main__':
-    dp.run_polling(bot)
+    # Инициализируем бот и диспетчер
+    bot = Bot(token=config.tg_bot.token)
+    dp = Dispatcher()
+
+    # Регистриуем роутеры в диспетчере
+    dp.include_router(user_handlers.router)
+    dp.include_router(other_handlers.router)
+
+    # Пропускаем накопившиеся апдейты и запускаем polling
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+
+
+asyncio.run(main())
